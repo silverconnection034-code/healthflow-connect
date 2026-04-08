@@ -85,7 +85,7 @@ export default function AmbulancePage() {
           <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="active"><div className="data-table-wrapper">{active.length === 0 ? <EmptyState icon={Ambulance} title="No active trips" description="Active trips appear here." /> : renderTable(active)}</div></TabsContent>
-        <TabsContent value="pending"><div className="data-table-wrapper">{pending.length === 0 ? <EmptyState icon={Ambulance} title="No pending requests" /> : renderTable(pending)}</div></TabsContent>
+        <TabsContent value="pending"><div className="data-table-wrapper">{pending.length === 0 ? <EmptyState icon={Ambulance} title="No pending requests" description="Pending requests appear here." /> : renderTable(pending)}</div></TabsContent>
         <TabsContent value="completed"><div className="data-table-wrapper">{completed.length === 0 ? <EmptyState icon={Ambulance} title="No completed trips" /> : renderTable(completed)}</div></TabsContent>
       </Tabs>
 
