@@ -109,7 +109,7 @@ export default function BillingPage() {
         <TabsList><TabsTrigger value="all">All ({invoices.length})</TabsTrigger><TabsTrigger value="unpaid">Unpaid ({unpaid.length})</TabsTrigger><TabsTrigger value="paid">Paid ({paid.length})</TabsTrigger></TabsList>
         <TabsContent value="all"><div className="data-table-wrapper">{invoices.length === 0 ? <EmptyState icon={Receipt} title="No invoices" description="Create your first invoice." actionLabel="Create Invoice" onAction={() => setShowInvoice(true)} /> : renderInvoiceTable(invoices)}</div></TabsContent>
         <TabsContent value="unpaid"><div className="data-table-wrapper">{unpaid.length === 0 ? <EmptyState icon={Receipt} title="All paid!" description="No unpaid invoices." /> : renderInvoiceTable(unpaid)}</div></TabsContent>
-        <TabsContent value="paid"><div className="data-table-wrapper">{paid.length === 0 ? <EmptyState icon={Receipt} title="No paid invoices" /> : renderInvoiceTable(paid)}</div></TabsContent>
+        <TabsContent value="paid"><div className="data-table-wrapper">{paid.length === 0 ? <EmptyState icon={Receipt} title="No paid invoices" description="Completed payments appear here." /> : renderInvoiceTable(paid)}</div></TabsContent>
       </Tabs>
 
       <Dialog open={showInvoice} onOpenChange={setShowInvoice}>
