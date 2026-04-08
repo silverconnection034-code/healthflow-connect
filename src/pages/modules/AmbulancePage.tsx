@@ -86,7 +86,7 @@ export default function AmbulancePage() {
         </TabsList>
         <TabsContent value="active"><div className="data-table-wrapper">{active.length === 0 ? <EmptyState icon={Ambulance} title="No active trips" description="Active trips appear here." /> : renderTable(active)}</div></TabsContent>
         <TabsContent value="pending"><div className="data-table-wrapper">{pending.length === 0 ? <EmptyState icon={Ambulance} title="No pending requests" description="Pending requests appear here." /> : renderTable(pending)}</div></TabsContent>
-        <TabsContent value="completed"><div className="data-table-wrapper">{completed.length === 0 ? <EmptyState icon={Ambulance} title="No completed trips" /> : renderTable(completed)}</div></TabsContent>
+        <TabsContent value="completed"><div className="data-table-wrapper">{completed.length === 0 ? <EmptyState icon={Ambulance} title="No completed trips" description="Completed trips appear here." /> : renderTable(completed)}</div></TabsContent>
       </Tabs>
 
       <Dialog open={showRequest} onOpenChange={setShowRequest}>
