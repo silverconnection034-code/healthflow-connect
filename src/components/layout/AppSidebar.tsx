@@ -45,7 +45,6 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, hospital, hasPermission } = useAuth();
 
-  const isActive = (path: string) => location.pathname === path;
   const isSuperAdmin = user?.role === 'super_admin';
 
   const renderGroup = (label: string, items: typeof hospitalModules) => {
@@ -80,7 +79,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
+    <Sidebar collapsible="icon" className="border-r-0 aero-sidebar">
       <div className="p-4 border-b border-sidebar-border">
         {!collapsed ? (
           <div className="flex items-center gap-3">

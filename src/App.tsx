@@ -28,13 +28,24 @@ import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <AppLayout>{children}</AppLayout>;
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
 
   return (
     <Routes>
@@ -42,7 +53,6 @@ function AppRoutes() {
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* Hospital modules */}
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/reception" element={<ProtectedRoute><ReceptionPage /></ProtectedRoute>} />
       <Route path="/doctor" element={<ProtectedRoute><DoctorPage /></ProtectedRoute>} />
@@ -59,7 +69,6 @@ function AppRoutes() {
       <Route path="/payment-settings" element={<ProtectedRoute><PaymentSettingsPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
-      {/* Super Admin */}
       <Route path="/admin/hospitals" element={<ProtectedRoute><SuperAdminHospitalsPage /></ProtectedRoute>} />
       <Route path="/admin/subscriptions" element={<ProtectedRoute><SuperAdminSubscriptionsPage /></ProtectedRoute>} />
       <Route path="/admin/revenue" element={<ProtectedRoute><SuperAdminRevenuePage /></ProtectedRoute>} />
