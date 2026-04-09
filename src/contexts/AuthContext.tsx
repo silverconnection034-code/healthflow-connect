@@ -69,19 +69,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserData = useCallback(async (supaUser: SupaUser) => {
     try {
-      // Fetch profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', supaUser.id)
-        .single();
+        .maybeSingle();
 
-      // Fetch role
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', supaUser.id)
-        .single();
+        .maybeSingle();
 
       const role = (roleData?.role as UserRole) || 'receptionist';
 
@@ -96,13 +94,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(appUser);
 
-      // Fetch hospital if user has one
       if (profile?.hospital_id) {
         const { data: hosp } = await supabase
           .from('hospitals')
           .select('*')
           .eq('id', profile.hospital_id)
-          .single();
+          .maybeSingle();
 
         if (hosp) {
           setHospital(hosp as Hospital);
@@ -114,12 +111,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    // Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         setSession(newSession);
         if (newSession?.user) {
-          // Defer data fetch to avoid deadlocks
           setTimeout(() => fetchUserData(newSession.user), 0);
         } else {
           setUser(null);
@@ -128,7 +123,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // THEN check existing session
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
       if (existingSession?.user) {
@@ -156,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hospital_name: string; email: string; phone: string; location: string;
     admin_name: string; admin_email: string; admin_password: string;
   }) => {
-    // 1. Sign up the admin user
+    // 1. Sign up the admin user (auto-confirm is enabled)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.admin_email,
       password: data.admin_password,
@@ -167,6 +161,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     if (authError) throw authError;
     if (!authData.user) throw new Error('Registration failed');
+
+    // Wait a moment for trigger to create profile
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // 2. Create the hospital
     const { data: hosp, error: hospError } = await supabase
@@ -191,6 +188,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase
       .from('user_roles')
       .insert({ user_id: authData.user.id, hospital_id: hosp.id, role: 'hospital_admin' });
+
+    // Refresh user data
+    await fetchUserData(authData.user);
   };
 
   const logout = async () => {

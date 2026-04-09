@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, UserPlus, Stethoscope, HeartPulse, Pill,
   FlaskConical, Ambulance, Receipt, Users, Settings, Building2,
-  Shield, Bell, FileText, CreditCard, BarChart3
+  Shield, Bell, FileText, CreditCard, BarChart3, Pill as PillIcon
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -83,21 +83,21 @@ export function AppSidebar() {
       <div className="p-4 border-b border-sidebar-border">
         {!collapsed ? (
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(180deg, hsl(210 70% 55%), hsl(210 75% 42%))' }}>
+              <Pill className="h-5 w-5 text-orange-300" />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-sidebar-foreground truncate">
-                {isSuperAdmin ? 'HMS Platform' : hospital?.name || 'Hospital'}
+                {isSuperAdmin ? 'Abancool HMS' : hospital?.name || 'Hospital'}
               </p>
               <p className="text-xs text-sidebar-foreground/50 truncate">
-                {isSuperAdmin ? 'Super Admin' : 'Management System'}
+                {isSuperAdmin ? 'Super Admin' : 'Abancool Technology'}
               </p>
             </div>
           </div>
         ) : (
-          <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center mx-auto">
-            <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center mx-auto" style={{ background: 'linear-gradient(180deg, hsl(210 70% 55%), hsl(210 75% 42%))' }}>
+            <Pill className="h-5 w-5 text-orange-300" />
           </div>
         )}
       </div>
@@ -106,6 +106,11 @@ export function AppSidebar() {
         {!isSuperAdmin && renderGroup('Clinical', hospitalModules)}
         {!isSuperAdmin && renderGroup('Management', managementModules)}
       </SidebarContent>
+      {!collapsed && (
+        <div className="p-3 border-t border-sidebar-border text-center">
+          <p className="text-[10px] text-sidebar-foreground/40">Powered by Abancool Technology</p>
+        </div>
+      )}
     </Sidebar>
   );
 }
