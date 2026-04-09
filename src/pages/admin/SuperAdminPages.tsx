@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Building2, Search, CreditCard, BarChart3, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
+import { Building2, Search, CreditCard, BarChart3, TrendingUp, CheckCircle, XCircle, Users, Activity, Globe } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { EmptyState } from '@/components/shared/EmptyState';
 import { StatCard } from '@/components/shared/StatCard';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,9 +14,21 @@ import { supabase } from '@/integrations/supabase/client';
 export default function SuperAdminHospitalsPage() {
   const [hospitals, setHospitals] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalPatients, setTotalPatients] = useState(0);
 
   useEffect(() => {
-    supabase.from('hospitals').select('*').order('created_at', { ascending: false }).then(({ data }) => setHospitals(data || []));
+    const fetchData = async () => {
+      const [hospRes, usersRes, patientsRes] = await Promise.all([
+        supabase.from('hospitals').select('*').order('created_at', { ascending: false }),
+        supabase.from('user_roles').select('id', { count: 'exact', head: true }),
+        supabase.from('patients').select('id', { count: 'exact', head: true }),
+      ]);
+      setHospitals(hospRes.data || []);
+      setTotalUsers(usersRes.count || 0);
+      setTotalPatients(patientsRes.count || 0);
+    };
+    fetchData();
   }, []);
 
   const toggleActive = async (h: any) => {
@@ -36,24 +49,34 @@ export default function SuperAdminHospitalsPage() {
 
   return (
     <div className="module-page">
-      <PageHeader title="All Hospitals" description="Platform-wide hospital management" icon={Building2} />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <PageHeader title="Super Admin Dashboard" description="Abancool Technology HMS — Platform Management" icon={Globe} />
+
+      {/* Platform Overview */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard title="Total Hospitals" value={hospitals.length} icon={Building2} variant="primary" />
         <StatCard title="Active" value={active.length} icon={CheckCircle} variant="success" />
         <StatCard title="Trial" value={trial.length} icon={Building2} variant="warning" />
         <StatCard title="Expired" value={expired.length} icon={XCircle} variant="destructive" />
+        <StatCard title="Total Users" value={totalUsers} icon={Users} variant="primary" />
+        <StatCard title="Total Patients" value={totalPatients} icon={Activity} variant="success" />
       </div>
+
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Search hospitals..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
+
       <div className="data-table-wrapper">
         {filtered.length === 0 ? <EmptyState icon={Building2} title="No hospitals" description="Hospitals that register will appear here." /> : (
           <Table>
-            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Location</TableHead><TableHead>Subscription</TableHead><TableHead>Active</TableHead><TableHead>Created</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Location</TableHead><TableHead>Subscription</TableHead><TableHead>Active</TableHead><TableHead>Created</TableHead>
+            </TableRow></TableHeader>
             <TableBody>{filtered.map(h => (
               <TableRow key={h.id}>
                 <TableCell className="font-medium">{h.name}</TableCell>
+                <TableCell className="text-sm">{h.email}</TableCell>
+                <TableCell className="text-sm">{h.phone}</TableCell>
                 <TableCell>{h.location}</TableCell>
                 <TableCell><Badge className={statusColor(h.subscription_status)}>{h.subscription_status}</Badge></TableCell>
                 <TableCell><Switch checked={h.is_active} onCheckedChange={() => toggleActive(h)} /></TableCell>
@@ -62,6 +85,12 @@ export default function SuperAdminHospitalsPage() {
             ))}</TableBody>
           </Table>
         )}
+      </div>
+
+      {/* Footer branding */}
+      <div className="text-center pt-4 border-t border-border">
+        <p className="text-sm font-bold text-primary">Powered by Abancool Technology</p>
+        <p className="text-xs text-muted-foreground">0728825152 / 01116679286</p>
       </div>
     </div>
   );

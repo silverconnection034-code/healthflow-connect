@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FlaskConical, Search, ClipboardCheck, Loader2 } from 'lucide-react';
+import { FlaskConical, Search, ClipboardCheck, Loader2, Clock, CheckCircle, AlertTriangle, Beaker } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { StatCard } from '@/components/shared/StatCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,12 +23,13 @@ export default function LabPage() {
   const [selectedTest, setSelectedTest] = useState<any>(null);
   const [results, setResults] = useState('');
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   const hospitalId = user?.hospital_id;
 
   const fetchData = useCallback(async () => {
     if (!hospitalId) return;
-    const { data } = await supabase.from('lab_tests').select('*, patients(full_name)').eq('hospital_id', hospitalId).order('created_at', { ascending: false });
+    const { data } = await supabase.from('lab_tests').select('*, patients(full_name, patient_number)').eq('hospital_id', hospitalId).order('created_at', { ascending: false });
     setTests(data || []);
   }, [hospitalId]);
 
@@ -61,27 +63,53 @@ export default function LabPage() {
     return 'bg-warning/10 text-warning';
   };
 
-  const renderTable = (items: any[], showActions = false) => items.length === 0 ? null : (
-    <Table>
-      <TableHeader><TableRow><TableHead>Patient</TableHead><TableHead>Test</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead>{showActions && <TableHead></TableHead>}</TableRow></TableHeader>
-      <TableBody>{items.map(t => (
-        <TableRow key={t.id}>
-          <TableCell className="font-medium">{(t as any).patients?.full_name}</TableCell>
-          <TableCell>{t.test_name}</TableCell>
-          <TableCell><Badge className={statusBadge(t.status)}>{t.status}</Badge></TableCell>
-          <TableCell className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</TableCell>
-          {showActions && <TableCell className="space-x-2">
-            {t.status === 'requested' && <Button size="sm" variant="outline" onClick={() => startTest(t)}>Start</Button>}
-            {t.status === 'in_progress' && <Button size="sm" onClick={() => { setSelectedTest(t); setShowResult(true); }}>Enter Results</Button>}
-          </TableCell>}
-        </TableRow>
-      ))}</TableBody>
-    </Table>
-  );
+  const filterTests = (items: any[]) => {
+    if (!search) return items;
+    return items.filter(t =>
+      t.test_name.toLowerCase().includes(search.toLowerCase()) ||
+      (t as any).patients?.full_name?.toLowerCase().includes(search.toLowerCase())
+    );
+  };
+
+  const renderTable = (items: any[], showActions = false) => {
+    const filtered = filterTests(items);
+    if (filtered.length === 0) return null;
+    return (
+      <Table>
+        <TableHeader><TableRow><TableHead>Patient</TableHead><TableHead>ID</TableHead><TableHead>Test</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead>{showActions && <TableHead>Actions</TableHead>}</TableRow></TableHeader>
+        <TableBody>{filtered.map(t => (
+          <TableRow key={t.id}>
+            <TableCell className="font-medium">{(t as any).patients?.full_name}</TableCell>
+            <TableCell className="font-mono text-xs">{(t as any).patients?.patient_number}</TableCell>
+            <TableCell>{t.test_name}</TableCell>
+            <TableCell><Badge className={statusBadge(t.status)}>{t.status}</Badge></TableCell>
+            <TableCell className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</TableCell>
+            {showActions && <TableCell className="space-x-2">
+              {t.status === 'requested' && <Button size="sm" variant="outline" onClick={() => startTest(t)}>Start</Button>}
+              {t.status === 'in_progress' && <Button size="sm" onClick={() => { setSelectedTest(t); setShowResult(true); }}>Enter Results</Button>}
+            </TableCell>}
+          </TableRow>
+        ))}</TableBody>
+      </Table>
+    );
+  };
 
   return (
     <div className="module-page">
-      <PageHeader title="Laboratory" description="Test requests & results" icon={FlaskConical} />
+      <PageHeader title="Laboratory Dashboard" description="Test requests, processing & results" icon={FlaskConical} />
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard title="Pending Tests" value={pending.length} icon={AlertTriangle} variant="warning" subtitle="Awaiting processing" />
+        <StatCard title="In Progress" value={inProgress.length} icon={Beaker} variant="primary" subtitle="Currently testing" />
+        <StatCard title="Completed" value={completed.length} icon={CheckCircle} variant="success" subtitle="Results ready" />
+        <StatCard title="Total Tests" value={tests.length} icon={FlaskConical} variant="default" subtitle="All time" />
+      </div>
+
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Search tests or patients..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
 
       <Tabs defaultValue="pending">
         <TabsList>
@@ -91,17 +119,17 @@ export default function LabPage() {
         </TabsList>
         <TabsContent value="pending">
           <div className="data-table-wrapper">
-            {pending.length === 0 ? <EmptyState icon={FlaskConical} title="No pending tests" description="Lab requests from doctors appear here." /> : renderTable(pending, true)}
+            {filterTests(pending).length === 0 ? <EmptyState icon={FlaskConical} title="No pending tests" description="Lab requests from doctors appear here." /> : renderTable(pending, true)}
           </div>
         </TabsContent>
         <TabsContent value="progress">
           <div className="data-table-wrapper">
-            {inProgress.length === 0 ? <EmptyState icon={FlaskConical} title="No tests in progress" description="Tests you're processing appear here." /> : renderTable(inProgress, true)}
+            {filterTests(inProgress).length === 0 ? <EmptyState icon={FlaskConical} title="No tests in progress" description="Tests you're processing appear here." /> : renderTable(inProgress, true)}
           </div>
         </TabsContent>
         <TabsContent value="completed">
           <div className="data-table-wrapper">
-            {completed.length === 0 ? <EmptyState icon={ClipboardCheck} title="No completed tests" description="Completed results listed here." /> : renderTable(completed)}
+            {filterTests(completed).length === 0 ? <EmptyState icon={ClipboardCheck} title="No completed tests" description="Completed results listed here." /> : renderTable(completed)}
           </div>
         </TabsContent>
       </Tabs>
@@ -109,8 +137,13 @@ export default function LabPage() {
       <Dialog open={showResult} onOpenChange={setShowResult}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">Enter Lab Results</DialogTitle></DialogHeader>
+          {selectedTest && (
+            <div className="bg-muted/50 rounded-lg p-3 mb-2">
+              <p className="text-sm"><span className="font-medium">Patient:</span> {(selectedTest as any).patients?.full_name}</p>
+              <p className="text-sm"><span className="font-medium">Test:</span> {selectedTest.test_name}</p>
+            </div>
+          )}
           <div className="space-y-4">
-            <div className="space-y-2"><Label>Test</Label><Input disabled value={selectedTest?.test_name || ''} /></div>
             <div className="space-y-2"><Label>Results *</Label><Textarea placeholder="Enter test results..." rows={5} value={results} onChange={e => setResults(e.target.value)} /></div>
           </div>
           <Button className="w-full mt-2" onClick={submitResults} disabled={loading || !results}>
