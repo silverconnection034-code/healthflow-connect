@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Search, UserPlus, ShieldCheck, Loader2 } from 'lucide-react';
+import { Briefcase, Search, UserPlus, ShieldCheck, Loader2, Users } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { StatCard } from '@/components/shared/StatCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -22,7 +23,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 const staffRoles = ['receptionist', 'doctor', 'nurse', 'pharmacist', 'lab_technician', 'accountant', 'driver', 'hr'];
 
-export default function StaffPage() {
+export default function HRPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [showAdd, setShowAdd] = useState(false);
@@ -62,7 +63,7 @@ export default function StaffPage() {
     await supabase.from('profiles').update({ hospital_id: hospitalId, full_name: form.full_name, phone: form.phone }).eq('user_id', authData.user.id);
     await supabase.from('user_roles').insert({ user_id: authData.user.id, hospital_id: hospitalId, role: form.role as any });
 
-    toast({ title: 'Staff added', description: `${form.full_name} added as ${ROLE_LABELS[form.role]}` });
+    toast({ title: 'Staff added', description: `${form.full_name} added as ${ROLE_LABELS[form.role]}. Login: ${form.email} / ${form.password}` });
     setShowAdd(false);
     setForm({ full_name: '', email: '', phone: '', role: '', password: '' });
     fetchData();
@@ -75,10 +76,18 @@ export default function StaffPage() {
   };
 
   const filtered = staff.filter(s => s.full_name?.toLowerCase().includes(search.toLowerCase()));
+  const roleCount = (r: string) => staff.filter(s => s.role === r).length;
 
   return (
     <div className="module-page">
-      <PageHeader title="Staff Management" description="Manage hospital staff & roles" icon={Users} actionLabel="Add Staff" onAction={() => setShowAdd(true)} />
+      <PageHeader title="HR Department" description="Staff management, roles & employment — NO patient/financial data" icon={Briefcase} actionLabel="Add Staff" onAction={() => setShowAdd(true)} />
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard title="Total Staff" value={staff.length} icon={Users} variant="primary" subtitle="All roles" />
+        <StatCard title="Doctors" value={roleCount('doctor')} icon={Users} variant="success" subtitle="Active" />
+        <StatCard title="Nurses" value={roleCount('nurse')} icon={Users} variant="warning" subtitle="Active" />
+        <StatCard title="Other Staff" value={staff.length - roleCount('doctor') - roleCount('nurse')} icon={Users} variant="default" subtitle="All other" />
+      </div>
 
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -87,15 +96,16 @@ export default function StaffPage() {
 
       <div className="data-table-wrapper">
         {filtered.length === 0 ? (
-          <EmptyState icon={Users} title="No staff" description="Add staff members to your hospital." actionLabel="Add Staff" onAction={() => setShowAdd(true)} />
+          <EmptyState icon={Users} title="No staff members" description="Add staff to your hospital." actionLabel="Add Staff" onAction={() => setShowAdd(true)} />
         ) : (
           <Table>
-            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Phone</TableHead><TableHead>Role</TableHead><TableHead>Active</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Phone</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Active</TableHead></TableRow></TableHeader>
             <TableBody>{filtered.map(s => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">{s.full_name}</TableCell>
                 <TableCell>{s.phone || '—'}</TableCell>
                 <TableCell><Badge variant="secondary">{ROLE_LABELS[s.role] || s.role}</Badge></TableCell>
+                <TableCell>{s.is_active ? <Badge className="bg-success/10 text-success">Active</Badge> : <Badge className="bg-destructive/10 text-destructive">Inactive</Badge>}</TableCell>
                 <TableCell><Switch checked={s.is_active} onCheckedChange={() => toggleActive(s)} /></TableCell>
               </TableRow>
             ))}</TableBody>
@@ -105,10 +115,10 @@ export default function StaffPage() {
 
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent>
-          <DialogHeader><DialogTitle className="font-display">Add Staff Member</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">Add New Staff Member</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2"><Label>Full Name *</Label><Input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} placeholder="Staff name" /></div>
-            <div className="space-y-2"><Label>Email *</Label><Input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="staff@hospital.co.ke" /></div>
+            <div className="space-y-2"><Label>Email (Login) *</Label><Input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="staff@hospital.co.ke" /></div>
             <div className="space-y-2"><Label>Password *</Label><Input type="text" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="Set login password" /></div>
             <div className="space-y-2"><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+254" /></div>
             <div className="space-y-2"><Label className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" />Role *</Label>
@@ -118,8 +128,9 @@ export default function StaffPage() {
               </Select></div>
           </div>
           <Button className="w-full mt-2" onClick={addStaff} disabled={loading || !form.full_name || !form.email || !form.role || !form.password}>
-            {loading ? 'Creating...' : 'Create Staff Account'}
+            {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating...</> : 'Create Staff Account'}
           </Button>
+          <p className="text-xs text-muted-foreground text-center">Staff will use the email and password above to log in.</p>
         </DialogContent>
       </Dialog>
     </div>
