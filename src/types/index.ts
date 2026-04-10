@@ -233,6 +233,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   lab_technician: ['dashboard', 'lab'],
   accountant: ['dashboard', 'billing', 'reports', 'insurance'],
   driver: ['dashboard', 'ambulance'],
+  hr: ['dashboard', 'hr', 'staff'],
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -245,4 +246,5 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   lab_technician: 'Lab Technician',
   accountant: 'Accountant',
   driver: 'Driver',
+  hr: 'HR Manager',
 };
