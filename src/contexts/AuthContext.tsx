@@ -4,7 +4,7 @@ import type { User as SupaUser, Session } from '@supabase/supabase-js';
 
 export type UserRole =
   | 'super_admin' | 'hospital_admin' | 'receptionist' | 'doctor'
-  | 'nurse' | 'pharmacist' | 'lab_technician' | 'accountant' | 'driver';
+  | 'nurse' | 'pharmacist' | 'lab_technician' | 'accountant' | 'driver' | 'hr';
 
 export interface AppUser {
   id: string;
@@ -33,15 +33,16 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   hospital_admin: [
     'dashboard', 'reception', 'doctor', 'nurse', 'pharmacy', 'lab',
     'ambulance', 'billing', 'staff', 'settings', 'reports', 'insurance',
-    'notifications', 'audit_logs',
+    'notifications', 'audit_logs', 'hr',
   ],
-  receptionist: ['dashboard', 'reception', 'billing'],
+  receptionist: ['dashboard', 'reception'],
   doctor: ['dashboard', 'doctor', 'lab'],
-  nurse: ['dashboard', 'nurse', 'doctor'],
+  nurse: ['dashboard', 'nurse'],
   pharmacist: ['dashboard', 'pharmacy'],
   lab_technician: ['dashboard', 'lab'],
   accountant: ['dashboard', 'billing', 'reports', 'insurance'],
   driver: ['dashboard', 'ambulance'],
+  hr: ['dashboard', 'hr', 'staff'],
 };
 
 interface AuthContextType {
@@ -50,6 +51,7 @@ interface AuthContextType {
   session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isFrozen: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (data: {
     hospital_name: string; email: string; phone: string; location: string;
@@ -66,20 +68,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [hospital, setHospital] = useState<Hospital | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFrozen, setIsFrozen] = useState(false);
 
   const fetchUserData = useCallback(async (supaUser: SupaUser) => {
     try {
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', supaUser.id)
-        .maybeSingle();
+        .from('profiles').select('*').eq('user_id', supaUser.id).maybeSingle();
 
       const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', supaUser.id)
-        .maybeSingle();
+        .from('user_roles').select('role').eq('user_id', supaUser.id).maybeSingle();
 
       const role = (roleData?.role as UserRole) || 'receptionist';
 
@@ -94,16 +91,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(appUser);
 
-      if (profile?.hospital_id) {
+      // Check hospital status (freeze/subscription)
+      if (profile?.hospital_id && role !== 'super_admin') {
         const { data: hosp } = await supabase
-          .from('hospitals')
-          .select('*')
-          .eq('id', profile.hospital_id)
-          .maybeSingle();
+          .from('hospitals').select('*').eq('id', profile.hospital_id).maybeSingle();
 
         if (hosp) {
           setHospital(hosp as Hospital);
+          // Check if hospital is frozen or subscription expired
+          const isExpired = hosp.subscription_end && new Date(hosp.subscription_end) < new Date();
+          const frozen = !hosp.is_active || hosp.subscription_status === 'expired' || hosp.subscription_status === 'suspended' || isExpired;
+          setIsFrozen(frozen);
         }
+      } else if (role === 'super_admin') {
+        setIsFrozen(false);
       }
     } catch (err) {
       console.error('Error fetching user data:', err);
@@ -119,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setUser(null);
           setHospital(null);
+          setIsFrozen(false);
         }
       }
     );
@@ -138,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hasPermission = useCallback((module: string) => {
     if (!user) return false;
     const perms = ROLE_PERMISSIONS[user.role];
-    return perms.includes('*') || perms.includes(module);
+    return perms?.includes('*') || perms?.includes(module);
   }, [user]);
 
   const login = async (email: string, password: string) => {
@@ -150,7 +152,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hospital_name: string; email: string; phone: string; location: string;
     admin_name: string; admin_email: string; admin_password: string;
   }) => {
-    // 1. Sign up the admin user (auto-confirm is enabled)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.admin_email,
       password: data.admin_password,
@@ -162,34 +163,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (authError) throw authError;
     if (!authData.user) throw new Error('Registration failed');
 
-    // Wait a moment for trigger to create profile
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // 2. Create the hospital
     const { data: hosp, error: hospError } = await supabase
-      .from('hospitals')
-      .insert({
-        name: data.hospital_name,
-        email: data.email,
-        phone: data.phone,
-        location: data.location,
-      })
-      .select()
-      .single();
+      .from('hospitals').insert({
+        name: data.hospital_name, email: data.email,
+        phone: data.phone, location: data.location,
+      }).select().single();
     if (hospError) throw hospError;
 
-    // 3. Update profile with hospital_id
-    await supabase
-      .from('profiles')
+    await supabase.from('profiles')
       .update({ hospital_id: hosp.id, full_name: data.admin_name, phone: data.phone })
       .eq('user_id', authData.user.id);
 
-    // 4. Assign hospital_admin role
-    await supabase
-      .from('user_roles')
+    await supabase.from('user_roles')
       .insert({ user_id: authData.user.id, hospital_id: hosp.id, role: 'hospital_admin' });
 
-    // Refresh user data
     await fetchUserData(authData.user);
   };
 
@@ -198,11 +187,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setHospital(null);
     setSession(null);
+    setIsFrozen(false);
   };
 
   return (
     <AuthContext.Provider value={{
-      user, hospital, session, isAuthenticated: !!user, isLoading,
+      user, hospital, session, isAuthenticated: !!user, isLoading, isFrozen,
       login, register, logout, hasPermission,
     }}>
       {children}

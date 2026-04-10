@@ -1,7 +1,8 @@
 import {
   LayoutDashboard, UserPlus, Stethoscope, HeartPulse, Pill,
   FlaskConical, Ambulance, Receipt, Users, Settings, Building2,
-  Shield, Bell, FileText, CreditCard, BarChart3, Pill as PillIcon
+  Shield, Bell, FileText, CreditCard, BarChart3, Pill as PillIcon,
+  Briefcase
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -26,6 +27,7 @@ const hospitalModules = [
 ];
 
 const managementModules = [
+  { title: 'HR', url: '/hr', icon: Briefcase, module: 'hr' },
   { title: 'Staff', url: '/staff', icon: Users, module: 'staff' },
   { title: 'Notifications', url: '/notifications', icon: Bell, module: 'notifications' },
   { title: 'Audit Logs', url: '/audit-logs', icon: FileText, module: 'audit_logs' },

@@ -22,19 +22,32 @@ import NotificationsPage from "@/pages/modules/NotificationsPage";
 import AuditLogsPage from "@/pages/modules/AuditLogsPage";
 import PaymentSettingsPage from "@/pages/modules/PaymentSettingsPage";
 import SettingsPage from "@/pages/modules/SettingsPage";
+import HRPage from "@/pages/modules/HRPage";
 import SuperAdminHospitalsPage, { SuperAdminSubscriptionsPage, SuperAdminRevenuePage } from "@/pages/admin/SuperAdminPages";
 import NotFound from "@/pages/NotFound";
+import { FrozenHospitalScreen } from "@/components/layout/FrozenHospitalScreen";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+function ProtectedRoute({ children, requiredPermission }: { children: React.ReactNode; requiredPermission?: string }) {
+  const { isAuthenticated, isLoading, isFrozen, hasPermission, user } = useAuth();
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
     </div>
   );
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  // Hospital freeze check (super_admin bypasses)
+  if (isFrozen && user?.role !== 'super_admin') {
+    return <FrozenHospitalScreen />;
+  }
+
+  // Role-based access check
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return <AppLayout>{children}</AppLayout>;
 }
 
@@ -53,21 +66,22 @@ function AppRoutes() {
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/reception" element={<ProtectedRoute><ReceptionPage /></ProtectedRoute>} />
-      <Route path="/doctor" element={<ProtectedRoute><DoctorPage /></ProtectedRoute>} />
-      <Route path="/nurse" element={<ProtectedRoute><NursePage /></ProtectedRoute>} />
-      <Route path="/pharmacy" element={<ProtectedRoute><PharmacyPage /></ProtectedRoute>} />
-      <Route path="/lab" element={<ProtectedRoute><LabPage /></ProtectedRoute>} />
-      <Route path="/ambulance" element={<ProtectedRoute><AmbulancePage /></ProtectedRoute>} />
-      <Route path="/billing" element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
-      <Route path="/insurance" element={<ProtectedRoute><InsurancePage /></ProtectedRoute>} />
-      <Route path="/staff" element={<ProtectedRoute><StaffPage /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-      <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-      <Route path="/audit-logs" element={<ProtectedRoute><AuditLogsPage /></ProtectedRoute>} />
-      <Route path="/payment-settings" element={<ProtectedRoute><PaymentSettingsPage /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute requiredPermission="dashboard"><DashboardPage /></ProtectedRoute>} />
+      <Route path="/reception" element={<ProtectedRoute requiredPermission="reception"><ReceptionPage /></ProtectedRoute>} />
+      <Route path="/doctor" element={<ProtectedRoute requiredPermission="doctor"><DoctorPage /></ProtectedRoute>} />
+      <Route path="/nurse" element={<ProtectedRoute requiredPermission="nurse"><NursePage /></ProtectedRoute>} />
+      <Route path="/pharmacy" element={<ProtectedRoute requiredPermission="pharmacy"><PharmacyPage /></ProtectedRoute>} />
+      <Route path="/lab" element={<ProtectedRoute requiredPermission="lab"><LabPage /></ProtectedRoute>} />
+      <Route path="/ambulance" element={<ProtectedRoute requiredPermission="ambulance"><AmbulancePage /></ProtectedRoute>} />
+      <Route path="/billing" element={<ProtectedRoute requiredPermission="billing"><BillingPage /></ProtectedRoute>} />
+      <Route path="/insurance" element={<ProtectedRoute requiredPermission="insurance"><InsurancePage /></ProtectedRoute>} />
+      <Route path="/staff" element={<ProtectedRoute requiredPermission="staff"><StaffPage /></ProtectedRoute>} />
+      <Route path="/hr" element={<ProtectedRoute requiredPermission="hr"><HRPage /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute requiredPermission="reports"><ReportsPage /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute requiredPermission="notifications"><NotificationsPage /></ProtectedRoute>} />
+      <Route path="/audit-logs" element={<ProtectedRoute requiredPermission="audit_logs"><AuditLogsPage /></ProtectedRoute>} />
+      <Route path="/payment-settings" element={<ProtectedRoute requiredPermission="settings"><PaymentSettingsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute requiredPermission="settings"><SettingsPage /></ProtectedRoute>} />
 
       <Route path="/admin/hospitals" element={<ProtectedRoute><SuperAdminHospitalsPage /></ProtectedRoute>} />
       <Route path="/admin/subscriptions" element={<ProtectedRoute><SuperAdminSubscriptionsPage /></ProtectedRoute>} />
