@@ -7,7 +7,8 @@ export type UserRole =
   | 'pharmacist'
   | 'lab_technician'
   | 'accountant'
-  | 'driver';
+  | 'driver'
+  | 'hr';
 
 export interface Hospital {
   id: string;
