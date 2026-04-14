@@ -165,11 +165,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const { data: hosp, error: hospError } = await supabase
+    const hospitalId = crypto.randomUUID();
+    const { error: hospError } = await supabase
       .from('hospitals').insert({
+        id: hospitalId,
         name: data.hospital_name, email: data.email,
         phone: data.phone, location: data.location,
-      }).select().single();
+      });
     if (hospError) throw hospError;
 
     await supabase.from('profiles')
