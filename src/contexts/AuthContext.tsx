@@ -175,11 +175,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (hospError) throw hospError;
 
     await supabase.from('profiles')
-      .update({ hospital_id: hosp.id, full_name: data.admin_name, phone: data.phone })
+      .update({ hospital_id: hospitalId, full_name: data.admin_name, phone: data.phone })
       .eq('user_id', authData.user.id);
 
     await supabase.from('user_roles')
-      .insert({ user_id: authData.user.id, hospital_id: hosp.id, role: 'hospital_admin' });
+      .insert({ user_id: authData.user.id, hospital_id: hospitalId, role: 'hospital_admin' });
 
     await fetchUserData(authData.user);
   };
