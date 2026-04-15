@@ -373,8 +373,21 @@ export default function DashboardPage() {
   const hospitalId = user?.hospital_id;
   const role = user?.role;
 
-  if (!hospitalId || !user) {
+  if (!user) {
     return <div className="module-page"><p className="text-muted-foreground">Loading...</p></div>;
+  }
+
+  if (!hospitalId) {
+    return (
+      <div className="module-page">
+        <PageHeader title="Welcome" description="Your account is being set up" icon={Building2} />
+        <Card className="glass-panel p-8 text-center">
+          <CardContent>
+            <p className="text-muted-foreground">Your hospital profile is not linked yet. Please log out and register a hospital, or contact your administrator.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   switch (role) {

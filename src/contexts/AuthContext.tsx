@@ -174,12 +174,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     if (hospError) throw hospError;
 
-    await supabase.from('profiles')
-      .update({ hospital_id: hospitalId, full_name: data.admin_name, phone: data.phone })
-      .eq('user_id', authData.user.id);
-
-    await supabase.from('user_roles')
-      .insert({ user_id: authData.user.id, hospital_id: hospitalId, role: 'hospital_admin' });
+    const { error: setupError } = await supabase.rpc('complete_hospital_registration', {
+      _user_id: authData.user.id,
+      _hospital_id: hospitalId,
+      _full_name: data.admin_name,
+      _phone: data.phone,
+    });
+    if (setupError) throw setupError;
 
     await fetchUserData(authData.user);
   };
