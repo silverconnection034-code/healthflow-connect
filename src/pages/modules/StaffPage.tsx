@@ -47,26 +47,31 @@ export default function StaffPage() {
   const addStaff = async () => {
     if (!hospitalId || !form.email || !form.role || !form.password) return;
     setLoading(true);
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.email, password: form.password,
-      options: { data: { full_name: form.full_name } },
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke('create-staff', {
+        body: {
+          email: form.email,
+          password: form.password,
+          full_name: form.full_name,
+          phone: form.phone,
+          role: form.role,
+        },
+      });
 
-    if (authError || !authData.user) {
-      toast({ title: 'Error', description: authError?.message || 'Failed to create user', variant: 'destructive' });
+      if (error || data?.error) {
+        toast({ title: 'Error', description: data?.error || error?.message || 'Failed to create staff', variant: 'destructive' });
+        return;
+      }
+
+      toast({ title: 'Staff added successfully', description: `${form.full_name} added as ${ROLE_LABELS[form.role]}. They can now log in with their email and password.` });
+      setShowAdd(false);
+      setForm({ full_name: '', email: '', phone: '', role: '', password: '' });
+      fetchData();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to create staff', variant: 'destructive' });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    await new Promise(resolve => setTimeout(resolve, 800));
-    await supabase.from('profiles').update({ hospital_id: hospitalId, full_name: form.full_name, phone: form.phone }).eq('user_id', authData.user.id);
-    await supabase.from('user_roles').insert({ user_id: authData.user.id, hospital_id: hospitalId, role: form.role as any });
-
-    toast({ title: 'Staff added', description: `${form.full_name} added as ${ROLE_LABELS[form.role]}` });
-    setShowAdd(false);
-    setForm({ full_name: '', email: '', phone: '', role: '', password: '' });
-    fetchData();
-    setLoading(false);
   };
 
   const toggleActive = async (staffMember: any) => {
